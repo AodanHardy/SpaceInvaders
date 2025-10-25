@@ -42,10 +42,13 @@ async fn main() {
     // variables
     let player = load_texture(PLAYER_IMAGE).await.unwrap();
     let mut player_x:f32 = (PLAYER_START_POS_X) - (player.width()/2.0);
+    let background = load_texture(BACKGROUND_IMAGE).await.unwrap();
+    background.set_filter(FilterMode::Nearest);
+
 
     // main loop
     loop {
-        clear_background(BLACK);
+        draw_texture(&background, 0.0, 0.0, WHITE);
         draw_texture(
             &player,
             player_x,
@@ -56,3 +59,4 @@ async fn main() {
         next_frame().await;
     }
 }
+
