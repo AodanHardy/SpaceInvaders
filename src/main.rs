@@ -1,30 +1,36 @@
 use macroquad::prelude::*;
 
 // constants
-const SCREEN_WIDTH: f32 = 800.0;
-const SCREEN_HEIGHT: f32 = 600.0;
-const PLAYER_SPEED: f32 = 300.0;
+const SCREEN_WIDTH: i32 = 800;
+const SCREEN_HEIGHT: i32 = 600;
+
+// Player
+const PLAYER_SPEED: i32 = 300;
+const PLAYER_START_POS_X: f32 = (SCREEN_WIDTH / 2) as f32;
+const PLAYER_START_POS_Y: f32 = 500.0;
 
 // asset file paths
-const PLAYER_IMAGE: &str = "assets/player.png";
-const ENEMY_IMAGE: &str = "assets/enemy.png";
-const BULLET_IMAGE: &str = "assets/bullet.png";
-const BACKGROUND_IMAGE: &str = "assets/background.png";
-const LASER_SOUND: &str = "assets/laser.wav";
-const EXPLOSION_SOUND: &str = "assets/explosion.wav";
-const BACKGROUND_MUSIC: &str = "assets/background.wav";
+const PLAYER_IMAGE: &str = "player.png";
+const ENEMY_IMAGE: &str = "enemy.png";
+const BULLET_IMAGE: &str = "bullet.png";
+const BACKGROUND_IMAGE: &str = "background.png";
+const LASER_SOUND: &str = "laser.wav";
+const EXPLOSION_SOUND: &str = "explosion.wav";
+const BACKGROUND_MUSIC: &str = "background.wav";
+
+
 
 fn window_conf() -> Conf {
     Conf {
         window_title: "Space Invaders (Rust)".to_string(),
-        window_width: 800,
-        window_height: 600,
+        window_width: SCREEN_WIDTH,
+        window_height: SCREEN_HEIGHT,
         high_dpi: true,
         ..Default::default()
     }
 }
 
-// game loop
+// main window
 #[macroquad::main(window_conf)]
 async fn main() {
     #[cfg(not(target_arch = "wasm32"))]
@@ -33,22 +39,18 @@ async fn main() {
         set_pc_assets_folder("assets");
     }
 
+    // variables
+    let player = load_texture(PLAYER_IMAGE).await.unwrap();
+    let mut player_x:f32 = (PLAYER_START_POS_X) - (player.width()/2.0);
+
+    // main loop
     loop {
         clear_background(BLACK);
-
-        draw_text(
-            "Space Invaders — skeleton",
-            20.0,
-            40.0,
-            32.0,
-            WHITE,
-        );
-        draw_text(
-            &format!("FPS: {}", get_fps()),
-            20.0,
-            70.0,
-            24.0,
-            GRAY,
+        draw_texture(
+            &player,
+            player_x,
+            PLAYER_START_POS_Y,
+             WHITE
         );
 
         next_frame().await;
