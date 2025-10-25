@@ -5,7 +5,7 @@ const SCREEN_WIDTH: i32 = 800;
 const SCREEN_HEIGHT: i32 = 600;
 
 // Player
-const PLAYER_SPEED: i32 = 300;
+const PLAYER_SPEED: f32 = 3.0;
 const PLAYER_START_POS_X: f32 = (SCREEN_WIDTH / 2) as f32;
 const PLAYER_START_POS_Y: f32 = 500.0;
 
@@ -42,20 +42,29 @@ async fn main() {
     // variables
     let player = load_texture(PLAYER_IMAGE).await.unwrap();
     let mut player_x:f32 = (PLAYER_START_POS_X) - (player.width()/2.0);
+
+
     let background = load_texture(BACKGROUND_IMAGE).await.unwrap();
     background.set_filter(FilterMode::Nearest);
 
 
     // main loop
     loop {
-        draw_texture(&background, 0.0, 0.0, WHITE);
-        draw_texture(
-            &player,
-            player_x,
-            PLAYER_START_POS_Y,
-             WHITE
-        );
 
+        // check what keys are down
+        // sparebar shoots a bullet
+        is_key_down(KeyCode::Space);
+
+        // Player Movements
+        if is_key_down(KeyCode::Left) && player_x >0.0
+        { player_x = player_x - PLAYER_SPEED; }
+        if is_key_down(KeyCode::Right) && player_x <(SCREEN_WIDTH as f32-player.width())
+        { player_x = player_x + PLAYER_SPEED; }
+
+
+
+        draw_texture(&background, 0.0, 0.0, WHITE);
+        draw_texture(&player, player_x, PLAYER_START_POS_Y, WHITE);
         next_frame().await;
     }
 }
