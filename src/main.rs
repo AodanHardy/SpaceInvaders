@@ -174,6 +174,15 @@ impl Game {
             }
         }
 
+        // *** stop aliens hitting the bottom: end game if any reaches screen bottom ***
+        let screen_bottom = SCREEN_HEIGHT as f32 - 1.0;
+        for a in self.aliens.iter().filter(|a| a.alive) {
+            if a.y + alien_h >= screen_bottom {
+                self.game_over = true;
+                break;
+            }
+        }
+
         // next round when all aliens dead
         if !self.game_over && self.aliens.iter().all(|a| !a.alive) {
             self.round += 1;
@@ -225,9 +234,11 @@ impl Game {
     // build new round
     fn start_round(&mut self, round: u32) {
         self.aliens = make_alien_grid(&self.tex);
+
         // increase speed each round
         let scale = 1.0 + (round.saturating_sub(1)) as f32 * ROUND_SPEED_SCALE;
         self.alien_dx = ALIEN_SPEED * scale;
+
         self.step_down = ALIEN_STEP_DOWN;
         self.bullet = None;
     }
@@ -268,7 +279,6 @@ fn make_alien_grid(tex: &Textures) -> Vec<Alien> {
     aliens
 }
 
-
 fn window_conf() -> Conf {
     Conf {
         window_title: "Space Invaders (Rust)".to_string(),
@@ -278,7 +288,6 @@ fn window_conf() -> Conf {
         ..Default::default()
     }
 }
-
 
 #[macroquad::main(window_conf)]
 async fn main() {
