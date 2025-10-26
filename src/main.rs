@@ -87,8 +87,7 @@ impl Game {
         }
 
         // keep inside screen bounds
-        self.player_x = self
-            .player_x
+        self.player_x = self.player_x
             .clamp(0.0, SCREEN_WIDTH as f32 - self.tex.player.width());
 
         // spacebar shoots a bullet
@@ -122,7 +121,7 @@ impl Game {
             }
         }
 
-        // move aliens horizontally
+        // move aliens
         let alien_w = self.tex.enemy.width();
         let alien_h = self.tex.enemy.height();
         let sw = SCREEN_WIDTH as f32;
@@ -174,7 +173,7 @@ impl Game {
             }
         }
 
-        // *** stop aliens hitting the bottom: end game if any reaches screen bottom ***
+        // *** stop aliens hitting the bottom ***
         let screen_bottom = SCREEN_HEIGHT as f32 - 1.0;
         for a in self.aliens.iter().filter(|a| a.alive) {
             if a.y + alien_h >= screen_bottom {
@@ -253,7 +252,7 @@ impl Game {
     }
 }
 
-// basic rectangle collision
+// rectangle box
 fn rects_overlap(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
     ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by
 }
