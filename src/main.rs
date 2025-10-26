@@ -15,6 +15,9 @@ const ALIEN_STEP_DOWN: f32 = 0.1;
 const ALIEN_ROWS: usize = 3;
 const ALIEN_COLS: usize = 11;
 
+// round tuning
+const ROUND_SPEED_SCALE: f32 = 0.2;
+
 // assets
 const PLAYER_IMAGE: &str = "player.png";
 const BULLET_IMAGE: &str = "bullet.png";
@@ -56,6 +59,10 @@ struct Game {
     alien_dx: f32,
     step_down: f32,
 
+    // round / state
+    round: u32,
+    game_over: bool,
+
     tex: Textures,
 }
 
@@ -63,6 +70,14 @@ struct Game {
 // ******* METHODS *******
 impl Game {
     fn handle_input(&mut self, dt: f32) {
+        if self.game_over {
+            // allow restart
+            if is_key_pressed(KeyCode::R) {
+                self.restart_rounds();
+            }
+            return;
+        }
+
         // check key input and move player
         if is_key_down(KeyCode::Left) || is_key_down(KeyCode::A) {
             self.player_x -= PLAYER_SPEED * dt;
@@ -90,6 +105,10 @@ impl Game {
     }
 
     fn update(&mut self, dt: f32) {
+        if self.game_over {
+            return;
+        }
+
         // move bullet upward each frame
         if let Some(b) = &mut self.bullet {
             if b.active {
@@ -141,7 +160,25 @@ impl Game {
                 }
             }
         }
-        // todo check alien collision with player
+
+        // check alien collision with player
+        let px = self.player_x;
+        let py = self.player_y;
+        let pw = self.tex.player.width();
+        let ph = self.tex.player.height();
+
+        for a in self.aliens.iter().filter(|a| a.alive) {
+            if rects_overlap(px, py, pw, ph, a.x, a.y, alien_w, alien_h) {
+                self.game_over = true;
+                break;
+            }
+        }
+
+        // next round when all aliens dead
+        if !self.game_over && self.aliens.iter().all(|a| !a.alive) {
+            self.round += 1;
+            self.start_round(self.round);
+        }
     }
 
     fn draw(&self) {
@@ -161,13 +198,74 @@ impl Game {
 
         // draw player ship
         draw_texture(&self.tex.player, self.player_x, self.player_y, WHITE);
+
+        // round text
+        draw_text(
+            &format!("Round: {}", self.round),
+            12.0,
+            24.0,
+            24.0,
+            WHITE,
+        );
+
+        // game over text
+        if self.game_over {
+            let msg = "GAME OVER - press R to restart";
+            let m = measure_text(msg, None, 32, 1.0);
+            draw_text(
+                msg,
+                (SCREEN_WIDTH as f32 - m.width) * 0.5,
+                SCREEN_HEIGHT as f32 * 0.5,
+                32.0,
+                WHITE,
+            );
+        }
+    }
+
+    // build new round
+    fn start_round(&mut self, round: u32) {
+        self.aliens = make_alien_grid(&self.tex);
+        // increase speed each round
+        let scale = 1.0 + (round.saturating_sub(1)) as f32 * ROUND_SPEED_SCALE;
+        self.alien_dx = ALIEN_SPEED * scale;
+        self.step_down = ALIEN_STEP_DOWN;
+        self.bullet = None;
+    }
+
+    // restart from round 1
+    fn restart_rounds(&mut self) {
+        self.round = 1;
+        self.game_over = false;
+        self.player_x = PLAYER_START_POS_X - (self.tex.player.width() / 2.0);
+        self.player_y = PLAYER_START_POS_Y;
+        self.start_round(self.round);
     }
 }
-
 
 // basic rectangle collision
 fn rects_overlap(ax: f32, ay: f32, aw: f32, ah: f32, bx: f32, by: f32, bw: f32, bh: f32) -> bool {
     ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by
+}
+
+// build aliens for a round
+fn make_alien_grid(tex: &Textures) -> Vec<Alien> {
+    let h_spacing = tex.enemy.width() + 12.0;
+    let v_spacing = tex.enemy.height() + 10.0;
+    let grid_width = ALIEN_COLS as f32 * h_spacing;
+    let start_x = (SCREEN_WIDTH as f32 - grid_width) * 0.5;
+    let start_y = 80.0;
+
+    let mut aliens = Vec::with_capacity(ALIEN_ROWS * ALIEN_COLS);
+    for r in 0..ALIEN_ROWS {
+        for c in 0..ALIEN_COLS {
+            aliens.push(Alien {
+                x: start_x + c as f32 * h_spacing,
+                y: start_y + r as f32 * v_spacing,
+                alive: true,
+            });
+        }
+    }
+    aliens
 }
 
 
@@ -195,14 +293,6 @@ async fn main() {
     let bullet = load_texture(BULLET_IMAGE).await.unwrap();
     let background = load_texture(BACKGROUND_IMAGE).await.unwrap();
     let enemy = load_texture(ENEMY_IMAGE).await.unwrap();
-
-    // make pixel art crisp
-    player.set_filter(FilterMode::Nearest);
-    bullet.set_filter(FilterMode::Nearest);
-    background.set_filter(FilterMode::Nearest);
-    enemy.set_filter(FilterMode::Nearest);
-
-    // store in struct
     let tex = Textures {
         player,
         bullet,
@@ -210,34 +300,21 @@ async fn main() {
         enemy,
     };
 
-    // create alien grid
-    let h_spacing = tex.enemy.width() + 12.0;
-    let v_spacing = tex.enemy.height() + 10.0;
-    let grid_width = ALIEN_COLS as f32 * h_spacing;
-    let start_x = (SCREEN_WIDTH as f32 - grid_width) * 0.5;
-    let start_y = 80.0;
-
-    let mut aliens = Vec::with_capacity(ALIEN_ROWS * ALIEN_COLS);
-    for r in 0..ALIEN_ROWS {
-        for c in 0..ALIEN_COLS {
-            aliens.push(Alien {
-                x: start_x + c as f32 * h_spacing,
-                y: start_y + r as f32 * v_spacing,
-                alive: true,
-            });
-        }
-    }
-
     // create game object
     let mut game = Game {
         player_x: PLAYER_START_POS_X - (tex.player.width() / 2.0),
         player_y: PLAYER_START_POS_Y,
         bullet: None,
-        aliens,
+        aliens: vec![],
         alien_dx: ALIEN_SPEED,
         step_down: ALIEN_STEP_DOWN,
+        round: 1,
+        game_over: false,
         tex,
     };
+
+    // start round 1
+    game.start_round(1);
 
     // ******** MAIN LOOP ********
     loop {
